@@ -9,7 +9,7 @@ const finalTag = document.getElementById('finalTag');
 let stopPoint = 200;
 const scrollSpeed = 0.5;
 const zoomSpeed = 0.008;
-const maxScroll = 130000; // Increased scroll for the cinematic exit duration
+const maxScroll = 130000;
 
 // LIMITS:
 const maxZoomLevel = 30; 
@@ -22,7 +22,6 @@ let chuTagCreated = false;
 let galleryGenerated = false;
 let endingStickerCreated = false;
 
-// --- ADD CSS ANIMATIONS ---
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
     @keyframes floatGallery {
@@ -50,7 +49,7 @@ function generateEyes() {
     
     for (let i = 0; i < numEyes; i++) {
         const eye = document.createElement('img');
-        eye.src = 'eye.png';
+        eye.src = '/html/eye.png'; // Fixed Path
         eye.className = 'bg-eye';
         const region = regions[i];
         const x = region.x[0] + Math.random() * (region.x[1] - region.x[0]);
@@ -84,7 +83,7 @@ function generateChuStickers() {
     
     for (let i = 0; i < numStickers; i++) {
         const sticker = document.createElement('img');
-        sticker.src = 'chu.png'; 
+        sticker.src = '/html/chu.png'; // Fixed Path
         sticker.className = 'bg-chu'; 
         const region = regions[i % regions.length];
         const x = region.x[0] + Math.random() * (region.x[1] - region.x[0]);
@@ -111,18 +110,16 @@ function generateGallery() {
     
     for (let i = 0; i < 10; i++) {
         const img = document.createElement('img');
-        img.src = `chuchu${i+1}.jpg`; // Using .jpg
+        img.src = `/html/chuchu${i+1}.jpg`; // Fixed Path
         img.className = 'gallery-item'; 
         
         let l, t, w, h;
         if (!isMobile) {
-            // Desktop: 2 Rows x 5 Cols
             const col = i % 5; 
             const row = Math.floor(i / 5); 
             w = 20; h = 50;
             l = col * 20; t = row * 50;
         } else {
-            // Mobile: 5 Rows x 2 Cols
             const col = i % 2; 
             const row = Math.floor(i / 2); 
             w = 50; h = 20;
@@ -137,23 +134,18 @@ function generateGallery() {
         img.style.objectFit = 'cover';
         img.style.zIndex = '10'; 
         img.style.opacity = '0';
-        
-        // Initial Entrance Position (Slide Up)
         img.style.transform = 'translateY(100px) scale(0.9)'; 
         img.style.transition = 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.8s ease';
         img.style.border = '1px solid rgba(255,255,255,0.2)';
 
-        // --- B&W LOGIC FOR EVENS (2, 4, 6, 8, 10) ---
-        // (i + 1) gives the file number.
-        // If (number % 2 === 0), it's even.
         let baseFilter = '';
         if ((i + 1) % 2 === 0) {
-            baseFilter = 'grayscale(100%) contrast(120%) brightness(90%)'; // Noir Style
+            baseFilter = 'grayscale(100%) contrast(120%) brightness(90%)'; 
         } else {
             baseFilter = 'none';
         }
         img.style.filter = baseFilter;
-        img.dataset.baseFilter = baseFilter; // Store it for later use in animation
+        img.dataset.baseFilter = baseFilter;
 
         document.body.appendChild(img);
     }
@@ -161,7 +153,7 @@ function generateGallery() {
 
 function createChuTag() {
     const img = document.createElement('img');
-    img.src = 'chu_tag.png';
+    img.src = '/html/chu_tag.png'; // Fixed Path
     img.id = 'chuTag';
     img.style.position = 'fixed';
     img.style.top = '50%';
@@ -177,7 +169,7 @@ function createChuTag() {
 
 function createEndingSticker() {
     const img = document.createElement('img');
-    img.src = 'chu.png';
+    img.src = '/html/chu.png'; // Fixed Path
     img.id = 'endingSticker';
     img.style.position = 'fixed';
     img.style.top = '50%';
@@ -203,11 +195,11 @@ function updateAnimation(delta) {
     if (currentScroll < 0) currentScroll = 0;
     if (currentScroll > maxScroll) currentScroll = maxScroll;
 
-    // --- PHASE 1: HEAD LIFT ---
+    // --- PHASE 1 ---
     let headY = Math.min(currentScroll, stopPoint);
     if (head) head.style.transform = `translateY(-${headY}px)`;
 
-    // --- PHASE 2: ZOOM SPIRAL ---
+    // --- PHASE 2 ---
     let rawZoom = 1;
     let visualZoom = 1;
 
@@ -236,7 +228,7 @@ function updateAnimation(delta) {
             if(p) p.style.opacity = 0;
             setTimeout(() => { if(container) container.style.opacity = 0; }, 100); 
 
-            // --- PHASE 3: CHAOS ---
+            // --- PHASE 3 ---
             let chaosOpacity = 1;
             if (rawZoom > 38) {
                 chaosOpacity = Math.max(0, 1 - ((rawZoom - 38) / 7));
@@ -257,7 +249,7 @@ function updateAnimation(delta) {
                 eye.style.transform = `rotate(${rot}deg) scale(${tagScale * 0.8})`; 
             });
 
-            // --- PHASE 4: CHU PHASE ---
+            // --- PHASE 4 ---
             const chuStart = 48;
             const chuExitStart = 75; 
             
@@ -293,43 +285,37 @@ function updateAnimation(delta) {
                     sticker.style.transform = `rotate(${rot}deg) scale(${stickerScale})`;
                 });
 
-                // --- PHASE 5: GALLERY + CINEMATIC EXIT ---
+                // --- PHASE 5 ---
                 const galleryStart = 78; 
-                const endingStart = 115; // When the cinematic exit begins
+                const endingStart = 115; 
                 
                 let galleryGlobalOpacity = 1;
                 let blurAmount = 0;
                 let driftScale = 1;
 
                 if (rawZoom > endingStart) {
-                    // PHASE 6: ENDING TRANSITION
                     targetBG = "#000000"; 
-                    let fadeOutProgress = (rawZoom - endingStart) / 15; // Slower fade for cinematic feel
-                    
+                    let fadeOutProgress = (rawZoom - endingStart) / 15;
                     galleryGlobalOpacity = Math.max(0, 1 - fadeOutProgress);
-                    
-                    // CINEMATIC EFFECT: Blur + Drift Away
                     blurAmount = Math.min(20, (rawZoom - endingStart) * 0.5);
                     driftScale = Math.max(0, 1 - ((rawZoom - endingStart) * 0.02)); 
 
                     if (!endingStickerCreated) { createEndingSticker(); endingStickerCreated = true; }
                     const endChu = document.getElementById('endingSticker');
                     if (endChu) {
-                        // Delay the sticker appearance slightly so the gallery dissolves first
                         let endOpacity = Math.min(1, (rawZoom - (endingStart + 5)) / 10);
                         endChu.style.opacity = Math.max(0, endOpacity);
                         endChu.style.transform = `translate(-50%, -50%) scale(1)`; 
                     }
                 } else {
-                     const endChu = document.getElementById('endingSticker');
-                     if(endChu) endChu.style.opacity = 0;
+                    const endChu = document.getElementById('endingSticker');
+                    if(endChu) endChu.style.opacity = 0;
                 }
 
                 body.style.backgroundColor = targetBG;
 
                 if (rawZoom > galleryStart) {
                     if (!galleryGenerated) { generateGallery(); galleryGenerated = true; }
-                    
                     const galleryProgress = rawZoom - galleryStart;
                     const popInterval = 2; 
                     const imagesToShow = Math.floor(galleryProgress / popInterval);
@@ -337,29 +323,20 @@ function updateAnimation(delta) {
                     const galleryItems = document.querySelectorAll('.gallery-item');
                     galleryItems.forEach((img, idx) => {
                         if (idx <= imagesToShow) {
-                            // Show Image
                             img.style.opacity = 1 * galleryGlobalOpacity;
-                            
-                            // Apply Cinematic Exit Transforms
                             if (rawZoom > endingStart) {
-                                // During Exit: Apply Blur & Drift
                                 const baseFilter = img.dataset.baseFilter || 'none';
                                 img.style.filter = `blur(${blurAmount}px) ${baseFilter}`;
                                 img.style.transform = `scale(${driftScale})`;
-                                img.style.transition = 'none'; // Disable transition for smooth animation
+                                img.style.transition = 'none'; 
                             } else {
-                                // Normal Gallery Mode
                                 img.style.transform = `translateY(0px) scale(1)`;
                                 img.style.filter = img.dataset.baseFilter;
-                                
-                                // Add float animation if not exiting
                                 if (!img.classList.contains('floating-item')) {
                                     setTimeout(() => img.classList.add('floating-item'), 800);
                                 }
                             }
-
                         } else {
-                            // Hidden (Before Pop)
                             img.style.opacity = 0;
                             img.style.transform = `translateY(100px) scale(0.9)`; 
                             img.classList.remove('floating-item');
@@ -373,21 +350,18 @@ function updateAnimation(delta) {
                         img.classList.remove('floating-item');
                     });
                 }
-
             } else {
                 const chuTag = document.getElementById('chuTag');
                 if(chuTag) chuTag.style.opacity = 0;
                 const stickers = document.querySelectorAll('.bg-chu');
                 stickers.forEach(s => s.style.opacity = 0);
             }
-
         } else {
-            // Reset All
             if(container) {
                 container.style.transition = "opacity 0s";
                 container.style.opacity = 1;
             }
-            body.style.backgroundColor = "#051F45"; 
+            body.style.backgroundColor = "#051F45";
             if(h1) h1.style.opacity = 1;
             if(p) p.style.opacity = 1;
             if(finalTag) finalTag.style.opacity = 0;
@@ -399,14 +373,12 @@ function updateAnimation(delta) {
             const eTag = document.getElementById('endingSticker');
             if(eTag) eTag.style.opacity = 0;
         }
-
     } else {
         if (container) {
             container.style.borderRadius = '0%';
             container.style.overflow = "visible";
         }
     }
-
     if (container) {
         container.style.transformOrigin = "50% 43%"; 
         container.style.transform = `translate(-50%, -40%) scale(${visualZoom})`;
@@ -414,9 +386,19 @@ function updateAnimation(delta) {
 }
 
 window.addEventListener('wheel', (e) => { updateAnimation(e.deltaY); });
+
+// MOBILE FIX
+let startY = 0;
+window.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+}, { passive: false });
+
 window.addEventListener('touchmove', (e) => {
+    e.preventDefault(); 
     const currentY = e.touches[0].clientY;
-    updateAnimation((startY - currentY) * 0.4);
+    const deltaY = (startY - currentY) * 2.5; 
+    updateAnimation(deltaY);
     startY = currentY;
-});
+}, { passive: false });
+
 window.addEventListener('resize', updateStopPoint);
