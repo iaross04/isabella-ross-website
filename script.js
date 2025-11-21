@@ -8,7 +8,7 @@ const finalTag = document.getElementById('finalTag');
 
 // --- SETTINGS (SPEED BOOSTED) ---
 let stopPoint = 200;
-const scrollSpeed = 1.9;
+const scrollSpeed = 1.6;
 const zoomSpeed = 0.008;
 const maxScroll = 130000;
 
