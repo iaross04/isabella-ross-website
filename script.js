@@ -6,13 +6,13 @@ const h1 = document.querySelector('h2');
 const p = document.querySelector('.subtitle');
 const finalTag = document.getElementById('finalTag');
 
-// --- SETTINGS (SPEED BOOSTED) ---
+// --- SETTINGS ---
 let stopPoint = 200;
-const scrollSpeed = 1.6;
+const scrollSpeed = 2.0; // Sensitivity ng scroll input
 const zoomSpeed = 0.008;
-const maxScroll = 130000;
+const maxScroll = 16500; // Sakto sa dulo
 
-// LIMITS:
+// Limits
 const maxZoomLevel = 30; 
 const maxTagScale = 4.0; 
 
@@ -23,7 +23,7 @@ let chuTagCreated = false;
 let galleryGenerated = false;
 let endingStickerCreated = false;
 
-// --- INJECT CSS ---
+// --- INJECT CSS (Optimized for GPU) ---
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
     @keyframes floatGallery {
@@ -35,16 +35,31 @@ styleSheet.innerText = `
         animation: floatGallery 4s ease-in-out infinite;
     }
     body {
-        transition: background-color 0.3s ease-in-out !important;
+        transition: background-color 0.5s ease-in-out !important;
     }
     .content {
         background-color: transparent !important;
         pointer-events: none;
     }
+    /* Disable touch actions for custom scroll */
+    html, body {
+        touch-action: none; 
+        overscroll-behavior: none;
+    }
+    /* FORCE GPU ACCELERATION (Anti-Lag) */
+    .character-container, .gallery-item, .bg-eye, .bg-chu, #finalTag, #chuTag {
+        will-change: transform, opacity;
+        backface-visibility: hidden;
+        transform-style: preserve-3d;
+    }
+    /* Remove transitions from moving elements to avoid conflict */
+    #chuTag, .bg-chu {
+        transition: none !important;
+    }
 `;
 document.head.appendChild(styleSheet);
 
-// --- 1. GENERATE SCARY EYES ---
+// --- GENERATE FUNCTIONS (Same as before) ---
 function generateEyes() {
     const numEyes = 7;
     const sizeValues = { small: 50, medium: 80, large: 110 }; 
@@ -78,7 +93,6 @@ function generateEyes() {
     }
 }
 
-// --- 2. GENERATE CHU STICKERS ---
 function generateChuStickers() {
     const numStickers = 8; 
     const sizeValues = { small: 60, medium: 90, large: 130 }; 
@@ -108,12 +122,10 @@ function generateChuStickers() {
         sticker.style.opacity = 0;
         sticker.style.position = 'fixed';
         sticker.style.zIndex = '25'; 
-        sticker.style.transition = 'transform 0.1s linear'; 
         document.body.appendChild(sticker);
     }
 }
 
-// --- 3. GENERATE GALLERY ---
 function generateGallery() {
     const isMobile = window.innerWidth < 768;
     
@@ -167,6 +179,7 @@ function createChuTag() {
     img.style.position = 'fixed';
     img.style.top = '50%';
     img.style.left = '50%';
+    // Remove default transition via CSS injection above
     img.style.transform = 'translate(-50%, -50%) scale(0)';
     img.style.width = '350px'; 
     img.style.maxWidth = '80%';
@@ -197,13 +210,50 @@ function updateStopPoint() {
 }
 updateStopPoint();
 
-let currentScroll = 0;
+// --- 🚀 NEW SMOOTH SCROLL ENGINE ---
+let targetScroll = 0; // Kung saan gustong pumunta ng scroll
+let currentScroll = 0; // Kung nasaan ang scroll ngayon (Slowly following target)
 
-function updateAnimation(delta) {
-    currentScroll += delta * scrollSpeed;
-    if (currentScroll < 0) currentScroll = 0;
-    if (currentScroll > maxScroll) currentScroll = maxScroll;
+// 1. Input Listener (Mouse Wheel) - Updates TARGET only
+window.addEventListener('wheel', (e) => {
+    targetScroll += e.deltaY * scrollSpeed;
+    if (targetScroll < 0) targetScroll = 0;
+    if (targetScroll > maxScroll) targetScroll = maxScroll;
+});
 
+// 2. Input Listener (Touch) - Updates TARGET only
+let startY = 0;
+window.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+}, { passive: false });
+
+window.addEventListener('touchmove', (e) => {
+    e.preventDefault(); 
+    const currentY = e.touches[0].clientY;
+    const deltaY = (startY - currentY) * 3.5; // Mobile speed multiplier
+    targetScroll += deltaY;
+    
+    if (targetScroll < 0) targetScroll = 0;
+    if (targetScroll > maxScroll) targetScroll = maxScroll;
+    
+    startY = currentY;
+}, { passive: false });
+
+// 3. RENDER LOOP (Game Loop) - Runs 60x per second
+function render() {
+    // LERP (Linear Interpolation): Makes currentScroll follow targetScroll smoothly
+    // 0.1 = 10% catch up per frame (Higher = faster/snappier, Lower = smoother/floatier)
+    currentScroll += (targetScroll - currentScroll) * 0.1;
+
+    // --- CURSOR LOGIC ---
+    if (targetScroll >= maxScroll - 100) {
+        document.body.classList.add('end-state');
+    } else {
+        document.body.classList.remove('end-state');
+    }
+
+    // --- ANIMATION LOGIC ---
+    
     let headY = Math.min(currentScroll, stopPoint);
     if (head) head.style.transform = `translateY(-${headY}px)`;
 
@@ -218,7 +268,7 @@ function updateAnimation(delta) {
         if (visualZoom > 3) head.style.opacity = Math.max(0, 1 - (visualZoom - 3)); 
         else head.style.opacity = 1;
 
-        // --- THE SYNCED TRIGGER POINT ---
+        // Trigger 15
         const triggerPoint = 15; 
 
         if (container) {
@@ -228,25 +278,23 @@ function updateAnimation(delta) {
             container.style.borderRadius = `${radius}%`;
             container.style.overflow = (radius > 0) ? "hidden" : "visible";
 
-            // --- FADE LOGIC ---
+            // Fade
             if (rawZoom >= triggerPoint) {
-                container.style.opacity = Math.max(0, 1 - (rawZoom - triggerPoint) / 3);
+                 container.style.opacity = Math.max(0, 1 - (rawZoom - triggerPoint) / 3);
             } else {
-                container.style.opacity = 1;
+                 container.style.opacity = 1;
             }
         }
         
         if (rawZoom >= triggerPoint) {
-            // --- INSTANT COLOR CHANGE ---
+            // Color & Hide
             let targetBG = "#A5678E"; 
-            
             body.style.backgroundColor = targetBG;
             if(contentDiv) contentDiv.style.backgroundColor = "transparent";
-
-            // --- HIDE TEXT IMMEDIATELY ---
             if(h1) h1.style.opacity = 0;
             if(p) p.style.opacity = 0;
             
+            // Chaos
             let chaosOpacity = 1;
             if (rawZoom > 38) {
                 chaosOpacity = Math.max(0, 1 - ((rawZoom - 38) / 7));
@@ -267,6 +315,7 @@ function updateAnimation(delta) {
                 eye.style.transform = `rotate(${rot}deg) scale(${tagScale * 0.8})`; 
             });
 
+            // Chu Stickers
             const chuStart = 48;
             const chuExitStart = 75; 
             
@@ -302,6 +351,7 @@ function updateAnimation(delta) {
                     sticker.style.transform = `rotate(${rot}deg) scale(${stickerScale})`;
                 });
 
+                // Gallery
                 const galleryStart = 78; 
                 const endingStart = 115; 
                 
@@ -373,7 +423,7 @@ function updateAnimation(delta) {
                 stickers.forEach(s => s.style.opacity = 0);
             }
         } else {
-            // --- RESET TO BLUE ---
+            // Reset
             body.style.backgroundColor = "#051F45";
             if(contentDiv) contentDiv.style.backgroundColor = "transparent";
 
@@ -398,22 +448,12 @@ function updateAnimation(delta) {
         container.style.transformOrigin = "50% 43%"; 
         container.style.transform = `translate(-50%, -40%) scale(${visualZoom})`;
     }
+
+    // LOOP AGAIN
+    requestAnimationFrame(render);
 }
 
-window.addEventListener('wheel', (e) => { updateAnimation(e.deltaY); });
-
-let startY = 0;
-window.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-}, { passive: false });
-
-window.addEventListener('touchmove', (e) => {
-    e.preventDefault(); 
-    const currentY = e.touches[0].clientY;
-    // 👇 SPEED BOOST FOR MOBILE TOO
-    const deltaY = (startY - currentY) * 4.5; 
-    updateAnimation(deltaY);
-    startY = currentY;
-}, { passive: false });
+// Start the Loop
+requestAnimationFrame(render);
 
 window.addEventListener('resize', updateStopPoint);

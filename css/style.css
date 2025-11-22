@@ -170,3 +170,8 @@ body::after {
     transform-origin: center;
 
 }
+
+body.end-state,
+body.end-state * {
+    cursor: not-allowed !important;
+}
