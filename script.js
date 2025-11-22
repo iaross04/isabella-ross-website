@@ -11,7 +11,7 @@ let stopPoint = 200;
 const scrollSpeed = 2.0; 
 const zoomSpeed = 0.008;
 
-const maxScroll = 24000; 
+const maxScroll = 22000; 
 
 const maxZoomLevel = 30; 
 const maxTagScale = 4.0; 
