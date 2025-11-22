@@ -1,29 +1,29 @@
 const head = document.getElementById('floatingHead');
 const container = document.querySelector('.character-container');
 const body = document.body;
-const contentDiv = document.querySelector('.content'); 
+const contentDiv = document.querySelector('.content');
 const h1 = document.querySelector('h2');
 const p = document.querySelector('.subtitle');
 const finalTag = document.getElementById('finalTag');
 
 // --- SETTINGS ---
 let stopPoint = 200;
-const scrollSpeed = 2.0; // Sensitivity ng scroll input
+const scrollSpeed = 3.5;
 const zoomSpeed = 0.008;
-const maxScroll = 16500; // Sakto sa dulo
 
-// Limits
-const maxZoomLevel = 30; 
-const maxTagScale = 4.0; 
+const maxScroll = 24000;
 
-// State flags
+const maxZoomLevel = 30;
+const maxTagScale = 4.0;
+
+// Flags
 let eyesGenerated = false;
 let chuStickersGenerated = false;
 let chuTagCreated = false;
 let galleryGenerated = false;
 let endingStickerCreated = false;
 
-// --- INJECT CSS (Optimized for GPU) ---
+// --- INJECT CSS ---
 const styleSheet = document.createElement("style");
 styleSheet.innerText = `
     @keyframes floatGallery {
@@ -41,25 +41,26 @@ styleSheet.innerText = `
         background-color: transparent !important;
         pointer-events: none;
     }
-    /* Disable touch actions for custom scroll */
     html, body {
         touch-action: none; 
         overscroll-behavior: none;
     }
-    /* FORCE GPU ACCELERATION (Anti-Lag) */
+    /* GPU Optimization */
     .character-container, .gallery-item, .bg-eye, .bg-chu, #finalTag, #chuTag {
         will-change: transform, opacity;
         backface-visibility: hidden;
         transform-style: preserve-3d;
     }
-    /* Remove transitions from moving elements to avoid conflict */
-    #chuTag, .bg-chu {
-        transition: none !important;
+    #chuTag, .bg-chu, .gallery-item {
+        transition: none !important; 
+    }
+    body.end-state, body.end-state * {
+        cursor: not-allowed !important;
     }
 `;
 document.head.appendChild(styleSheet);
 
-// --- GENERATE FUNCTIONS (Same as before) ---
+// --- GENERATORS ---
 function generateEyes() {
     const numEyes = 7;
     const sizeValues = { small: 50, medium: 80, large: 110 }; 
@@ -156,7 +157,6 @@ function generateGallery() {
         img.style.zIndex = '10'; 
         img.style.opacity = '0';
         img.style.transform = 'translateY(100px) scale(0.9)'; 
-        img.style.transition = 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.8s ease';
         img.style.border = '1px solid rgba(255,255,255,0.2)';
 
         let baseFilter = '';
@@ -179,7 +179,6 @@ function createChuTag() {
     img.style.position = 'fixed';
     img.style.top = '50%';
     img.style.left = '50%';
-    // Remove default transition via CSS injection above
     img.style.transform = 'translate(-50%, -50%) scale(0)';
     img.style.width = '350px'; 
     img.style.maxWidth = '80%';
@@ -201,7 +200,6 @@ function createEndingSticker() {
     img.style.zIndex = '200'; 
     img.style.opacity = 0;
     img.style.pointerEvents = 'none';
-    img.style.transition = 'opacity 1s ease, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     document.body.appendChild(img);
 }
 
@@ -210,18 +208,16 @@ function updateStopPoint() {
 }
 updateStopPoint();
 
-// --- 🚀 NEW SMOOTH SCROLL ENGINE ---
-let targetScroll = 0; // Kung saan gustong pumunta ng scroll
-let currentScroll = 0; // Kung nasaan ang scroll ngayon (Slowly following target)
+// --- SMOOTH SCROLL ENGINE ---
+let targetScroll = 0;
+let currentScroll = 0;
 
-// 1. Input Listener (Mouse Wheel) - Updates TARGET only
 window.addEventListener('wheel', (e) => {
     targetScroll += e.deltaY * scrollSpeed;
     if (targetScroll < 0) targetScroll = 0;
     if (targetScroll > maxScroll) targetScroll = maxScroll;
 });
 
-// 2. Input Listener (Touch) - Updates TARGET only
 let startY = 0;
 window.addEventListener('touchstart', (e) => {
     startY = e.touches[0].clientY;
@@ -230,30 +226,24 @@ window.addEventListener('touchstart', (e) => {
 window.addEventListener('touchmove', (e) => {
     e.preventDefault(); 
     const currentY = e.touches[0].clientY;
-    const deltaY = (startY - currentY) * 3.5; // Mobile speed multiplier
+    const deltaY = (startY - currentY) * 3.5; 
     targetScroll += deltaY;
-    
     if (targetScroll < 0) targetScroll = 0;
     if (targetScroll > maxScroll) targetScroll = maxScroll;
-    
     startY = currentY;
 }, { passive: false });
 
-// 3. RENDER LOOP (Game Loop) - Runs 60x per second
+// --- RENDER LOOP ---
 function render() {
-    // LERP (Linear Interpolation): Makes currentScroll follow targetScroll smoothly
-    // 0.1 = 10% catch up per frame (Higher = faster/snappier, Lower = smoother/floatier)
     currentScroll += (targetScroll - currentScroll) * 0.1;
 
-    // --- CURSOR LOGIC ---
-    if (targetScroll >= maxScroll - 100) {
+    // Cursor Trigger (End State)
+    if (targetScroll >= maxScroll - 500) {
         document.body.classList.add('end-state');
     } else {
         document.body.classList.remove('end-state');
     }
 
-    // --- ANIMATION LOGIC ---
-    
     let headY = Math.min(currentScroll, stopPoint);
     if (head) head.style.transform = `translateY(-${headY}px)`;
 
@@ -268,8 +258,7 @@ function render() {
         if (visualZoom > 3) head.style.opacity = Math.max(0, 1 - (visualZoom - 3)); 
         else head.style.opacity = 1;
 
-        // Trigger 15
-        const triggerPoint = 15; 
+        const triggerPoint = 12; 
 
         if (container) {
             let radius = 0;
@@ -278,23 +267,22 @@ function render() {
             container.style.borderRadius = `${radius}%`;
             container.style.overflow = (radius > 0) ? "hidden" : "visible";
 
-            // Fade
-            if (rawZoom >= triggerPoint) {
-                 container.style.opacity = Math.max(0, 1 - (rawZoom - triggerPoint) / 3);
+            if (rawZoom > 8) {
+                container.style.opacity = Math.max(0, 1 - (rawZoom - 8) / 4);
             } else {
-                 container.style.opacity = 1;
+                container.style.opacity = 1;
             }
         }
         
         if (rawZoom >= triggerPoint) {
-            // Color & Hide
+            // Pink BG
             let targetBG = "#A5678E"; 
             body.style.backgroundColor = targetBG;
             if(contentDiv) contentDiv.style.backgroundColor = "transparent";
+
             if(h1) h1.style.opacity = 0;
             if(p) p.style.opacity = 0;
             
-            // Chaos
             let chaosOpacity = 1;
             if (rawZoom > 38) {
                 chaosOpacity = Math.max(0, 1 - ((rawZoom - 38) / 7));
@@ -315,7 +303,6 @@ function render() {
                 eye.style.transform = `rotate(${rot}deg) scale(${tagScale * 0.8})`; 
             });
 
-            // Chu Stickers
             const chuStart = 48;
             const chuExitStart = 75; 
             
@@ -326,47 +313,47 @@ function render() {
                 const chuTag = document.getElementById('chuTag');
                 const stickers = document.querySelectorAll('.bg-chu');
 
-                let chuOpacity = Math.min(1, (rawZoom - chuStart) / 5);
-                let chuScaleBase = (rawZoom - chuStart) * 0.2;
-                let finalChuScale = chuScaleBase;
+                // Snowball Effect
+                let progress = rawZoom - chuStart;
+                let finalChuScale = progress * 0.2; 
+                let rot = progress * 2; 
+                let chuOpacity = 1;
                 
                 if (rawZoom > chuExitStart) {
-                    const exitProgress = rawZoom - chuExitStart;
-                    finalChuScale += exitProgress * 1.5; 
-                    chuOpacity = Math.max(0, 1 - (exitProgress / 8)); 
+                    let extraSpeed = rawZoom - chuExitStart;
+                    finalChuScale += extraSpeed * 1.5; 
+                    rot += extraSpeed * 10; 
+                    chuOpacity = Math.max(0, 1 - (extraSpeed / 15)); 
                 } else {
-                    finalChuScale = Math.min(finalChuScale, maxTagScale);
+                    chuOpacity = Math.min(1, progress / 5);
                 }
 
                 if (chuTag) {
                     chuTag.style.opacity = chuOpacity;
-                    let exitRot = (rawZoom > chuExitStart) ? (rawZoom - chuExitStart) * 10 : 0;
-                    chuTag.style.transform = `translate(-50%, -50%) scale(${finalChuScale}) rotate(${exitRot}deg)`;
+                    chuTag.style.transform = `translate(-50%, -50%) scale(${finalChuScale}) rotate(${rot}deg)`;
                 }
 
                 stickers.forEach(sticker => {
                     sticker.style.opacity = chuOpacity;
-                    const rot = parseFloat(sticker.dataset.rotation || 0);
-                    let stickerScale = finalChuScale * 0.9;
-                    sticker.style.transform = `rotate(${rot}deg) scale(${stickerScale})`;
+                    const baseRot = parseFloat(sticker.dataset.rotation || 0);
+                    sticker.style.transform = `rotate(${baseRot + rot}deg) scale(${finalChuScale * 0.9})`;
                 });
 
-                // Gallery
-                const galleryStart = 78; 
-                const endingStart = 115; 
+                const galleryStart = 95; 
+                const endingStart = 155; 
                 
                 let galleryGlobalOpacity = 1;
-                let blurAmount = 0;
                 let driftScale = 1;
 
                 if (rawZoom > endingStart) {
+                    // BLACK BG ENDING
                     targetBG = "#000000"; 
                     body.style.backgroundColor = targetBG; 
 
-                    let fadeOutProgress = (rawZoom - endingStart) / 15;
+                    let fadeOutProgress = (rawZoom - endingStart) / 20;
                     galleryGlobalOpacity = Math.max(0, 1 - fadeOutProgress);
-                    blurAmount = Math.min(20, (rawZoom - endingStart) * 0.5);
-                    driftScale = Math.max(0, 1 - ((rawZoom - endingStart) * 0.02)); 
+                    
+                    driftScale = Math.max(0, 1 - ((rawZoom - endingStart) * 0.01)); 
 
                     if (!endingStickerCreated) { createEndingSticker(); endingStickerCreated = true; }
                     const endChu = document.getElementById('endingSticker');
@@ -383,7 +370,8 @@ function render() {
                 if (rawZoom > galleryStart) {
                     if (!galleryGenerated) { generateGallery(); galleryGenerated = true; }
                     const galleryProgress = rawZoom - galleryStart;
-                    const popInterval = 2; 
+                    
+                    const popInterval = 5; 
                     const imagesToShow = Math.floor(galleryProgress / popInterval);
 
                     const galleryItems = document.querySelectorAll('.gallery-item');
@@ -391,13 +379,9 @@ function render() {
                         if (idx <= imagesToShow) {
                             img.style.opacity = 1 * galleryGlobalOpacity;
                             if (rawZoom > endingStart) {
-                                const baseFilter = img.dataset.baseFilter || 'none';
-                                img.style.filter = `blur(${blurAmount}px) ${baseFilter}`;
                                 img.style.transform = `scale(${driftScale})`;
-                                img.style.transition = 'none'; 
                             } else {
                                 img.style.transform = `translateY(0px) scale(1)`;
-                                img.style.filter = img.dataset.baseFilter;
                                 if (!img.classList.contains('floating-item')) {
                                     setTimeout(() => img.classList.add('floating-item'), 800);
                                 }
@@ -412,7 +396,7 @@ function render() {
                     const galleryItems = document.querySelectorAll('.gallery-item');
                     galleryItems.forEach(img => {
                         img.style.opacity = 0;
-                        img.style.transform = `translateY(100px) scale(0.9)`;
+                        img.style.transform = `translateY(100px) scale(0.9)`; 
                         img.classList.remove('floating-item');
                     });
                 }
@@ -423,7 +407,7 @@ function render() {
                 stickers.forEach(s => s.style.opacity = 0);
             }
         } else {
-            // Reset
+            // Reset Blue
             body.style.backgroundColor = "#051F45";
             if(contentDiv) contentDiv.style.backgroundColor = "transparent";
 
@@ -449,11 +433,9 @@ function render() {
         container.style.transform = `translate(-50%, -40%) scale(${visualZoom})`;
     }
 
-    // LOOP AGAIN
     requestAnimationFrame(render);
 }
 
-// Start the Loop
 requestAnimationFrame(render);
 
 window.addEventListener('resize', updateStopPoint);
